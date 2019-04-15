@@ -4,25 +4,25 @@ use warnings;
 use ExtUtils::MakeMaker;
 
 my %WriteMakefileArgs = (
-    NAME             => 'Device::RAID::Poller',
-    AUTHOR           => q{Zane C. Bowers-Hadley <vvelox@vvelox.net>},
-    VERSION_FROM     => 'lib/Device/RAID/Poller.pm',
-    ABSTRACT_FROM    => 'lib/Device/RAID/Poller.pm',
-    LICENSE          => 'artistic_2',
-    MIN_PERL_VERSION => '5.006',
-    CONFIGURE_REQUIRES => {
-        'ExtUtils::MakeMaker' => '0',
-    },
-    TEST_REQUIRES => {
-        'Test::More' => '0',
-    },
-    PREREQ_PM => {
-        #'ABC'              => '1.6',
-        #'Foo::Bar::Module' => '5.0401',
-    },
-    dist  => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
-    clean => { FILES => 'Device-RAID-Poller-*' },
-);
+						 NAME             => 'Device::RAID::Poller',
+						 AUTHOR           => q{Zane C. Bowers-Hadley <vvelox@vvelox.net>},
+						 VERSION_FROM     => 'lib/Device/RAID/Poller.pm',
+						 ABSTRACT_FROM    => 'lib/Device/RAID/Poller.pm',
+						 LICENSE          => 'artistic_2',
+						 MIN_PERL_VERSION => '5.006',
+						 CONFIGURE_REQUIRES => {
+												'ExtUtils::MakeMaker' => '0',
+												},
+						 TEST_REQUIRES => {
+										   'Test::More' => '0',
+										   },
+						 PREREQ_PM => {
+									   'Error::Helper' => '1.0.0',
+									   'Module::List' => '0.004',
+									   },
+						 dist  => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
+						 clean => { FILES => 'Device-RAID-Poller-*' },
+						 );
 
 # Compatibility with old versions of ExtUtils::MakeMaker
 unless (eval { ExtUtils::MakeMaker->VERSION('6.64'); 1 }) {
