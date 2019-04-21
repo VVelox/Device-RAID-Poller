@@ -9,7 +9,7 @@ use JSON;
 
 =head1 NAME
 
-Device::RAID::Poller - The great new Device::RAID::Poller!
+Device::RAID::Poller - Basic RAID status poller, returning RAID disk devices, types, and status.
 
 =head1 VERSION
 
@@ -35,6 +35,7 @@ Perhaps a little code snippet.
 
 =head2 new
 
+This initiates the object.
 
 
 =cut
@@ -170,6 +171,19 @@ sub load {
 		return undef;
 	}
 
+	my @backends=keys %{ $self->list_backends };
+
+	
+	foreach my $backend ( @backends ){
+		my $backend_test;
+		my $usable;
+		my $to_run='
+use '.$backend.';
+$backend_test='.$backend.'->new;
+';
+	}
+
+	return 1;
 }
 
 =head2 run
@@ -181,8 +195,71 @@ If nothing is nothing is loaded, load will be called.
 =cut
 
 sub run {
+	my $self=$_[0];
+
+	if( ! $self->errorblank ){
+		return undef;
+	}
 
 }
+
+=head1 STATUS HASH
+
+The returned hash is made up of sub hashes.
+
+Each key is the name of a RAID disk device and contains
+a RAID hash.
+
+=head2 RAID HASH
+
+=head3 status
+
+This can be any of the following values.
+
+    bad - missing disks
+    good - all disks are present
+    unknown - Unable to determine the current status.
+
+=head3 good
+
+This is a list of good disks in the array..
+
+=head3 bad
+
+This is a list of bad disks in the array.
+
+=head3 spare
+
+This is a list of spare disks in the array.
+
+=head3 type
+
+This is type of RAID in question.
+
+=head3 module
+
+This is the module that handled this device.
+
+=head3 BBUstatus
+
+This can be any of the following values.
+
+    notPresent - No BBU.
+    na - Not applicable. Device does not support it.
+    failed - BBU failed.
+    good - BBU is good.
+    charging - BBU is charging.
+    unknown - BBU status is not known.
+
+=head1 BACKENDS
+
+A backend is a module that exists directly under "Device::RAID::Poller::Backends::".
+
+=head1 ERROR HANDLING/CODES
+
+=head2 1/invalidModule
+
+A non-existent module to use was specified.
 
 =head1 AUTHOR
 

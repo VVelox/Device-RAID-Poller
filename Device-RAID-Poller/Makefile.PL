@@ -19,6 +19,7 @@ my %WriteMakefileArgs = (
 						 PREREQ_PM => {
 									   'Error::Helper' => '1.0.0',
 									   'Module::List' => '0.004',
+									   'JSON' => '2.97.001',
 									   },
 						 dist  => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
 						 clean => { FILES => 'Device-RAID-Poller-*' },

@@ -1,4 +1,4 @@
-package Device::RAID::Poller::Backends::FBSD_gmirror;
+package Device::RAID::Poller::Backends::ZFS;
 
 use 5.006;
 use strict;
@@ -6,7 +6,7 @@ use warnings;
 
 =head1 NAME
 
-Device::RAID::Poller::Backends::FBSD_gmirror - FreeBSD GEOM mirror RAID backend.
+Device::RAID::Poller::Backends::ZFS - ZFS zpool backend.
 
 =head1 VERSION
 
@@ -19,9 +19,9 @@ our $VERSION = '0.0.0';
 
 =head1 SYNOPSIS
 
-    use Device::RAID::Poller::Backends::FBSD_gmirror;
+    use Device::RAID::Poller::Backends::ZFS;
     
-    my $backend = Device::RAID::Poller::Backends::FBSD_gmirror;
+    my $backend = Device::RAID::Poller::Backends::ZFS;
     
     my $usable=$backend->usable;
     my %return_hash;
@@ -87,19 +87,29 @@ Returns a perl boolean for if it is usable or not.
 sub usable {
 	my $self=$_[0];
 
-	my $gmirror_bin='/sbin/gmirror';
-	my $kldstat_bin='/sbin/kldstat';
+	# Make sure we are on a OS on which ZFS is usable on.
 	if (
-		( $^O !~ 'freebsd' ) ||
-		( -x $gmirror_bin ) ||
-		( -x $kldstat_bin )
+		( $^O !~ 'freebsd' ) &&
+		( $^O !~ 'solaris' ) &&
+		( $^O !~ 'netbsd' ) &&
+		( $^O !~ 'linux' )
 		){
 		$self->{usable}=0;
 		return 0;
 	}
 
-	system('/sbin/kldstat -q -n geom_mirror');
+	# make sure we can locate zpool
+	my $zpool_bin=`which zpool`;
 	if ( $? != 0 ){
+		$self->{usable}=0;
+        return 0;
+	}
+	chomp($zpool_bin);
+	$self->{zpool_bin}=$zpool_bin;
+
+	# No zpools on this device.
+	my $pool_test=`$zpool_bin list`;
+	if ( $b !~ /^NAME/ ){
 		$self->{usable}=0;
         return 0;
 	}
