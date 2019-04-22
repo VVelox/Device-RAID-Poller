@@ -14,6 +14,8 @@ sub help{
 	&version;
 
 	print '
+
+-n   Run as a nagios/ichinga check instead of outputing JSON.
 ';
 
 }
@@ -151,3 +153,4 @@ if ( $nagios ){
 	# exit with the check status as the exit value as expected by nagios/ichinga
 	exit $check_status;
 }
+
