@@ -1,0 +1,42 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use Getopt::Long;
+use Device::Raid::Poller;
+
+sub version{
+	print "check_raid v. 0.0.0\n";
+}
+
+sub help{
+	&version;
+
+	print '
+';
+
+}
+
+# command line option holders
+my $help=0;
+my $version=0;
+
+# get the commandline options
+Getopt::Long::Configure ('no_ignore_case');
+Getopt::Long::Configure ('bundling');
+GetOptions(
+		   'version' => \$version,
+		   'v' => \$version,
+		   'help' => \$help,
+		   'h' => \$help,
+		   );
+
+# print version or help if requested
+if ( $help ){
+	&help;
+	exit 42;
+}
+if ( $version ){
+	&version;
+	exit 42;
+}
