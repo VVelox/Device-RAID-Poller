@@ -45,7 +45,7 @@ sub new {
 				};
     bless $self;
 
-    return undef;
+    return $self;
 }
 
 =head2 run
@@ -69,6 +69,18 @@ sub run {
 	if ( ! $self->{usable} ){
 		return %return_hash;
 	}
+
+	# zpool status notes for config section
+	# good...
+	# INUSE = spare in use
+	# ONLINE = working as intented
+	# bad...
+	# DEGRADED = device failed or is replacing one
+	# OFFLINE = administrative or being replaced
+	# FAULTED = failed disk
+	# UNAVAIL = missing disk
+	# spares...
+	# AVAIL = available spare
 
 	return %return_hash;
 }
@@ -109,7 +121,7 @@ sub usable {
 
 	# No zpools on this device.
 	my $pool_test=`$zpool_bin list`;
-	if ( $b !~ /^NAME/ ){
+	if ( $pool_test !~ /^NAME/ ){
 		$self->{usable}=0;
         return 0;
 	}

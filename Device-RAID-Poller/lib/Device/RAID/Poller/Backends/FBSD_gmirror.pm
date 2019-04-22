@@ -45,7 +45,7 @@ sub new {
 				};
     bless $self;
 
-    return undef;
+    return $self;
 }
 
 =head2 run

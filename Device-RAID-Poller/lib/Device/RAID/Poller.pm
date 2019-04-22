@@ -48,6 +48,7 @@ sub new {
 				errorExtra=>{
 							 flags=>{
 									 1=>'invalidModule',
+									 2=>'notLoaded',
 									 }
 							 },
 				modules=> {},
@@ -55,7 +56,7 @@ sub new {
 				};
     bless $self;
 
-    return undef;
+    return $self;
 }
 
 =head2 modules_get
@@ -162,6 +163,13 @@ This loads up the modules. Each one in the list is
 checked and then if started successfully, it is saved
 for reuse later.
 
+    my $loaded=$drp->load;
+    if ( $loaded ){
+        print "One or more backends are now loaded.\n";
+    }else{
+        print "No usable backends found.\n";
+    }
+
 =cut
 
 sub load {
@@ -173,17 +181,24 @@ sub load {
 
 	my @backends=keys %{ $self->list_backends };
 
-	
+	my $loaded=0;
+
 	foreach my $backend ( @backends ){
 		my $backend_test;
 		my $usable;
-		my $to_run='
+		my $test_string='
 use '.$backend.';
 $backend_test='.$backend.'->new;
+$usable=$backend_test->usable;
 ';
+		eval( $test_string );
+		if ( $usable ){
+			$self->{loaded}{$backend}=$backend_test;
+			$loaded=1;
+		}
 	}
 
-	return 1;
+	return $loaded;
 }
 
 =head2 run
@@ -191,6 +206,8 @@ $backend_test='.$backend.'->new;
 Runs the poller backend and report the results.
 
 If nothing is nothing is loaded, load will be called.
+
+    m6 %status=$drp->run;
 
 =cut
 
@@ -201,14 +218,51 @@ sub run {
 		return undef;
 	}
 
+	# Load should always be called before run.
+	my @loaded=$self->list_loaded;
+	if ( ! defined($loaded[0]) ){
+		$self->{error}=2;
+		$self->{errorString}='No backend modules loaded';
+		$self->warn;
+		return undef;
+	}
+
+	my %return_hash;
+
+	# Run each backend and check the return.
+	foreach my $backend ( @loaded ){
+		my %found;
+		eval{
+			%found=$self->{loaded}{$backend}->run;
+		};
+
+		# If we got a good return, pull each device into the return hash.
+		if (
+			defined($found{status}) &&
+			defined($found{devices}) &&
+			$found{status}
+			){
+			my @devs=keys( %{ $found{devices} } );
+			foreach my $dev ( @devs ){
+				$return_hash{$dev}=$found{devices}{$dev};
+			}
+		}
+	}
+
+	return %return_hash;
 }
 
 =head1 STATUS HASH
 
-The returned hash is made up of sub hashes.
+The statu hash made of of hashes. Each subhash is the of the type
+documented under the section RAID HASH.
 
-Each key is the name of a RAID disk device and contains
-a RAID hash.
+The keys of this hash are the device name as regarded by the module
+in question. These may not represent a valid name under /dev, but may
+just be a name generated to differentiate it from other devices. Both
+the ZFS and MegaCLI backends are examples of this. In ZFS cases the
+zpool is just a mountpoint some place. As to MegaCLI it is a name generated
+from info gathered from the card.
 
 =head2 RAID HASH
 
@@ -219,6 +273,16 @@ This can be any of the following values.
     bad - missing disks
     good - all disks are present
     unknown - Unable to determine the current status.
+
+=head2 name
+
+The name of the device.
+
+=head2 backend
+
+The backend that put polled this device. This is the name of the module
+under "Device::RAID::Poller::Backends::". So "Device::RAID::Poller::Backends::ZFS"
+would be "ZFS".
 
 =head3 good
 
@@ -234,7 +298,10 @@ This is a list of spare disks in the array.
 
 =head3 type
 
-This is type of RAID in question.
+This is type of RAID in question. This is a string that describes the RAID array.
+
+This may also be complex, such as for ZFS it is the output of 'zpool status' for the
+pool in question.
 
 =head3 module
 
@@ -255,11 +322,35 @@ This can be any of the following values.
 
 A backend is a module that exists directly under "Device::RAID::Poller::Backends::".
 
+Three methods must be present and as of currently are expected to run with no arguments.
+
+    new
+    usable
+    run
+
+The new method creates the object.
+
+The usable method runs some basic checks to see if it is usable or not.
+
+The run method returns a hash with the assorted info. See the section BACKEND RETURN HASH for
+more information.
+
+=head2 BACKEND RETURN HASH
+
+This is composed of keys below.
+
+    devices - A array of hashes as documented in the section RAID HASH.
+    stutus - A 0/1 representing if it the the run method was successful.
+
 =head1 ERROR HANDLING/CODES
 
 =head2 1/invalidModule
 
 A non-existent module to use was specified.
+
+=head2 2/notLoaded
+
+Either load has not been called or no usable modules were found.
 
 =head1 AUTHOR
 
