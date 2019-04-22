@@ -272,6 +272,7 @@ This can be any of the following values.
 
     bad - missing disks
     good - all disks are present
+    rebuilding - one or more drives is being rebuilt
     unknown - Unable to determine the current status.
 
 =head2 name
@@ -302,10 +303,6 @@ This is type of RAID in question. This is a string that describes the RAID array
 
 This may also be complex, such as for ZFS it is the output of 'zpool status' for the
 pool in question.
-
-=head3 module
-
-This is the module that handled this device.
 
 =head3 BBUstatus
 

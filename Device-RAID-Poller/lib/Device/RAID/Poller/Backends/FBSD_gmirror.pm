@@ -54,7 +54,7 @@ Runs the poller backend and report the results.
 
 If nothing is nothing is loaded, load will be called.
 
-    my $usable=$backend->usable;
+    my %status=$backend->run;
     
 
 =cut
@@ -62,13 +62,83 @@ If nothing is nothing is loaded, load will be called.
 sub run {
 	my $self=$_[0];
 
-	my %return_hash;
-	$return_hash{status}=0;
+	my %return_hash={
+					 'status'=>0,
+					 'devices'=>{},
+					 };
 
 	# if not usable, no point in continuing
 	if ( ! $self->{usable} ){
 		return %return_hash;
 	}
+
+	# Fetch the raw gmirror status.
+	my $raw=`/sbin/gmirror status`;
+	if ( $? != 0 ){
+		return %return_hash;
+	}
+
+	my @raw_split=split( /\n/, $raw );
+
+	# The first line contains nothing of interest.
+	shift @raw_split;
+
+	my $dev=undef;
+	foreach my $line (@raw_split){
+		my @line_split=split( /[\t ]+/, $line );
+
+		# lines starting with mirror mean we have a new dev
+		if ( $line_split[0] =~ /^mirror/ ){
+			$dev=$line_split[0];
+
+			#create the device if needed in the return hash
+			if ( ! defined( $return_hash{$dev} ) ){
+				$return_hash{devices}{$dev}={
+									'backend'=>'FBSD_gmirror',
+									'name'=>$dev,
+									'good'=>[],
+									'bad'=>[],
+									'spare'=>[],
+									'type'=>'mirror',
+									'BBUstatus'=>'na',
+									'status'=>'unknown',
+									};
+			}
+
+			# Check known mirror status values.
+			# Values pulled from sys/geom/mirror/g_mirror.c
+			if ( $line_split[1] eq 'COMPLETE' ){
+				$return_hash{devices}{$dev}{status}='good';
+			}elsif( $line_split[1] eq "DEGRADED" ){
+				$return_hash{devices}{$dev}{status}='bad';
+			}
+
+			# Check known disk status values.
+			# Values pulled from sys/geom/mirror/g_mirror.c
+			if ( $line_split[3] eq "(SYNCHRONIZING)" ){
+				$return_hash{devices}{$dev}{status}='rebuilding';
+				push( @{ $return_hash{devices}{$dev}{good} }, $line_split[2] );
+			}elsif( $line_split[3] eq "(ACTIVE)" ){
+				push( @{ $return_hash{devices}{$dev}{good} }, $line_split[2] );
+			}else{
+				push( @{ $return_hash{devices}{$dev}{bad} }, $line_split[2] );
+			}
+
+		}else{
+			# Check known disk status values.
+			# Values pulled from sys/geom/mirror/g_mirror.c
+			if ( $line_split[2] eq "(SYNCHRONIZING)" ){
+				$return_hash{$dev}{status}='rebuilding';
+				push( @{ $return_hash{devices}{$dev}{good} }, $line_split[1] );
+			}elsif( $line_split[2] eq "(ACTIVE)" ){
+				push( @{ $return_hash{devices}{$dev}{good} }, $line_split[1] );
+			}else{
+				push( @{ $return_hash{devices}{$dev}{bad} }, $line_split[1] );
+			}
+		}
+	}
+
+	$return_hash{status}=1;
 
 	return %return_hash;
 }
@@ -91,8 +161,8 @@ sub usable {
 	my $kldstat_bin='/sbin/kldstat';
 	if (
 		( $^O !~ 'freebsd' ) ||
-		( -x $gmirror_bin ) ||
-		( -x $kldstat_bin )
+		( ! -x $gmirror_bin ) ||
+		( ! -x $kldstat_bin )
 		){
 		$self->{usable}=0;
 		return 0;
