@@ -4,6 +4,8 @@ This module provides a generic method for polling RAID array status
 for multiple systems and supports easy additions of new backends via
 modules.
 
+The currently supported systems are listed below.
+
     FreeBSD GEOM mirror
 	ZFS
 

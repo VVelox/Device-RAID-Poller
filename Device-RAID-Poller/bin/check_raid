@@ -3,7 +3,8 @@
 use strict;
 use warnings;
 use Getopt::Long;
-use Device::Raid::Poller;
+use Device::RAID::Poller;
+use JSON;
 
 sub version{
 	print "check_raid v. 0.0.0\n";
@@ -20,6 +21,7 @@ sub help{
 # command line option holders
 my $help=0;
 my $version=0;
+my $nagios=0;
 
 # get the commandline options
 Getopt::Long::Configure ('no_ignore_case');
@@ -29,6 +31,7 @@ GetOptions(
 		   'v' => \$version,
 		   'help' => \$help,
 		   'h' => \$help,
+		   'n' => \$nagios,
 		   );
 
 # print version or help if requested
@@ -39,4 +42,112 @@ if ( $help ){
 if ( $version ){
 	&version;
 	exit 42;
+}
+
+my $drp=Device::RAID::Poller->new;
+my $load=$drp->load;
+if ( ! $load ){
+	warn('No backends consider themselves usable');
+	exit 255;
+}
+
+my %status=$drp->run;
+
+# put together stat information
+my %array_stats=(
+				 arrays=>0,
+				 good_arrays=>0,
+				 bad_arrays=>0,
+				 rebuilding_arrays=>0,
+				 unknown_arrays=>0,
+				 good_drives=>0,
+				 bad_drives=>0,
+				 spare_drives=>0,
+				 bbu_failed=>0,
+				 bbu_good=>0,
+				 bbu_charging=>0,
+				 bbu_notPresent=>0,
+				 bbu_unknown=>0,
+				 bbu_na=>0,
+				 );
+my @devs=keys(%status);
+foreach my $dev (@devs){
+	$array_stats{arrays}++;
+
+	if ( $status{$dev}{status} eq 'good' ){
+		$array_stats{good_arrays}++;
+	}elsif( $status{$dev}{status} eq 'bad' ){
+		$array_stats{bad_arrays}++;
+	}elsif( $status{$dev}{status} eq 'rebuilding' ){
+		$array_stats{rebuilding_arrays}++;
+	}elsif( $status{$dev}{status} eq 'unknown' ){
+		$array_stats{unknown_arrays}++;
+	}
+
+	if ( $status{$dev}{BBUstatus} eq 'good' ){
+		$array_stats{bbu_good}++;
+	}elsif( $status{$dev}{BBUstatus} eq 'bad' ){
+		$array_stats{bbu_bad}++;
+	}elsif( $status{$dev}{BBUstatus} eq 'charging' ){
+		$array_stats{bbu_charging}++;
+	}elsif( $status{$dev}{BBUstatus} eq 'notPresent' ){
+		$array_stats{bbu_notPresent}++;
+	}elsif( $status{$dev}{BBUstatus} eq 'unknown' ){
+		$array_stats{bbu_unknown}++;
+	}elsif( $status{$dev}{BBUstatus} eq 'na' ){
+		$array_stats{bbu_na}++;
+	}
+
+	if (defined($status{$dev}{good}[0] ) ){
+		$array_stats{good_drives}=$array_stats{good_drives}+$#{ $status{$dev}{good} }+1;
+	}
+	if (defined($status{$dev}{bad}[0] ) ){
+		$array_stats{bad_drives}=$array_stats{bad_drives}+$#{ $status{$dev}{bad} };
+	}
+	if (defined($status{$dev}{spare}[0] ) ){
+		$array_stats{spare_drives}=$array_stats{spare_drives}+$#{ $status{$dev}{spare} };
+	}
+}
+
+# process it like it is a nagios/ichinga check instead of as a SNMP extend
+if ( $nagios ){
+	my @devs=keys(%status);
+
+	# 0, OK
+	# 1, WARNING
+	# 2, CRITICAL
+	# 3, UNKNOWN
+	my $check_status=0;
+
+	# If anything other than good arrays are found, set the check status in order of severity.
+	if ( $array_stats{unknown_arrays} > 0 ){
+		$check_status=3;
+		print "UNKNOWN: ".$array_stats{unknown_arrays}." arrays with a unknown status found | ";
+	}elsif ( $array_stats{rebuilding_arrays} > 0 ){
+		$check_status=1;
+		print "WARNING: ".$array_stats{rebuilding_arrays}." arrays with a rebuilding status found | ";
+	}elsif ( $array_stats{bad_arrays} > 0 ){
+		$check_status=3;
+		print "CRITICAL: ".$array_stats{bad_arrays}." arrays with a bad status found | ";
+	}else{
+		print "OK: all found arrays are good | ";
+	}
+
+	print 'arrays='.$array_stats{arrays}.', '.
+	'good_arrays='.$array_stats{good_arrays}.', '.
+	'bad_arrays='.$array_stats{bad_arrays}.', '.
+	'rebuilding_arrays='.$array_stats{rebuilding_arrays}.', '.
+	'unknwon_arrays='.$array_stats{unknown_arrays}.', '.
+	'good_drives='.$array_stats{good_drives}.', '.
+	'bad_drives='.$array_stats{bad_drives}.', '.
+	'spare_drives='.$array_stats{spare_drives}.', '.
+	'bbu_failed='.$array_stats{bbu_failed}.', '.
+	'bbu_good='.$array_stats{bbu_good}.', '.
+	'bbu_charging='.$array_stats{bbu_charging}.', '.
+	'bbu_notPresent='.$array_stats{bbu_notPresent}.', '.
+	'bbu_unknown='.$array_stats{bbu_unknown}.', '.
+	'bbu_na='.$array_stats{bbu_na}."\n";
+
+	# exit with the check status as the exit value as expected by nagios/ichinga
+	exit $check_status;
 }
