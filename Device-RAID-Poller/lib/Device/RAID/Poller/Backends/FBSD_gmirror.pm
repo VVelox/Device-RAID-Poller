@@ -27,6 +27,9 @@ our $VERSION = '0.0.0';
     my %return_hash;
     if ( $usable ){
         %return_hash=$backend->run;
+        my %status=$backend->run;
+        use Data::Dumper;
+        print Dumper( \%status );
     }
 
 =head1 METHODS
@@ -55,17 +58,18 @@ Runs the poller backend and report the results.
 If nothing is nothing is loaded, load will be called.
 
     my %status=$backend->run;
-    
+    use Data::Dumper;
+    print Dumper( \%status );
 
 =cut
 
 sub run {
 	my $self=$_[0];
 
-	my %return_hash={
+	my %return_hash=(
 					 'status'=>0,
 					 'devices'=>{},
-					 };
+					 );
 
 	# if not usable, no point in continuing
 	if ( ! $self->{usable} ){

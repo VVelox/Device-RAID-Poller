@@ -62,8 +62,10 @@ If nothing is nothing is loaded, load will be called.
 sub run {
 	my $self=$_[0];
 
-	my %return_hash;
-	$return_hash{status}=0;
+	my %return_hash=(
+					 'status'=>0,
+					 'devices'=>{},
+					 );
 
 	# if not usable, no point in continuing
 	if ( ! $self->{usable} ){
@@ -81,6 +83,105 @@ sub run {
 	# UNAVAIL = missing disk
 	# spares...
 	# AVAIL = available spare
+
+	# Fetch the raw gmirror status.
+	my $raw=`/sbin/zpool list`;
+	if ( $? != 0 ){
+		return %return_hash;
+	}
+
+	# split it and shift the header line off
+	my @raw_split=split(/\n/, $raw);
+	shift @raw_split;
+
+	my @devs;
+
+	# find out what devs we have and build the return hash
+	foreach my $line (@raw_split){
+		my @line_split=split( /[\t ]+/, $line);
+		my $dev=$line_split[0];
+		push(@devs, $dev);
+		$dev='ZFS '.$dev;
+
+		$return_hash{devices}{$dev}={
+									 'backend'=>'ZFS',
+									 'name'=>$dev,
+									 'good'=>[],
+									 'bad'=>[],
+									 'spare'=>[],
+									 'type'=>'ZFS',
+									 'BBUstatus'=>'na',
+									 'status'=>'unknown',
+									 };
+
+		if ( $line_split[9] eq "ONLINE" ){
+			$return_hash{devices}{$dev}{status}='good';
+		}else{
+			$return_hash{devices}{$dev}{status}='bad';
+		}
+	}
+
+	# process each pool and for disk status info
+	foreach my $pool (@devs){
+		my $dev='ZFS '.$pool;
+
+		$raw=`/sbin/zpool status $pool`;
+		my @raw_split=split(/\n/, $raw);
+
+		# only begin processing ocne we find the line after name in the config section
+		my $config_found=0;
+		my $name_found=0;
+		foreach my $line (@raw_split){
+			$line=~s/^[\t ]+//;
+
+			# Check if we are at the config section or not at ever section change.
+			if ( $line =~ /^config\:/ ){
+				$config_found=1;
+			}elsif( $line =~ /^[A-Za-z0-1]+:/ ){
+				$config_found=0;
+			}
+
+			if ( $config_found){
+				# If we are in the config, begin processing after the NAME line.
+				my $process=0;
+				if ( $line =~ /^NAME/ ){
+					$name_found=1;
+				}elsif( $name_found ){
+					$process=1;
+				}
+
+				# We are inally in the are with the info we want.
+				if ( $process ){
+					my @line_split=split(/[\t ]+/, $line);
+					# Ignore vdev lines
+					# The mirror line must include - or it will accidentally match geom_mirror devices.
+					if (
+						( defined( $line_split[0] ) ) &&
+						( defined( $line_split[1] ) ) &&
+						( $line_split[0] ne $pool ) &&
+						( $line_split[0] !~ /^mirror\-/ ) &&
+						( $line_split[0] !~ /^spare/ ) &&
+						( $line_split[0] !~ /^log/ ) &&
+						( $line_split[0] !~ /^cache/ )
+						){
+						# We are at a drive line, figure out the drive status.
+						if (
+							( $line_split[1] eq 'ONLINE' ) ||
+							( $line_split[1] eq 'INUSE' )
+							){
+							push(@{ $return_hash{devices}{$dev}{good} }, $line_split[0]);
+						}elsif( $line_split[1] eq 'AVAIL' ){
+							push(@{ $return_hash{devices}{$dev}{spare} }, $line_split[0]);
+						}else{
+							push(@{ $return_hash{devices}{$dev}{bar} }, $line_split[0]);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	$return_hash{status}=1;
 
 	return %return_hash;
 }
