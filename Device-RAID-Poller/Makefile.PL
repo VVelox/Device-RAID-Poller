@@ -10,6 +10,7 @@ my %WriteMakefileArgs = (
 						 ABSTRACT_FROM    => 'lib/Device/RAID/Poller.pm',
 						 LICENSE          => 'artistic_2',
 						 MIN_PERL_VERSION => '5.006',
+						 INST_SCRIPT => 'bin',
 						 CONFIGURE_REQUIRES => {
 												'ExtUtils::MakeMaker' => '0',
 												},
