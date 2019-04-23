@@ -39,6 +39,15 @@ Below is a example of a check command config for Icinga2.
         vars.nrpe_command = "rcheck_raid"
     }
 
+=head2 SNMPD
+
+To add this to the net-snmp snmpd server, you just need to add it like below.
+
+    extend check_raid /usr/local/bin/sudo /usr/local/bin/check_raid -p
+
+The -p flag is not needed, only if you want to make debugging the output easy for
+debugging when polling from like LibreNMS or the like.
+
 =cut
 
 #Copyright (c) 2019, Zane C. Bowers-Hadley
