@@ -212,7 +212,8 @@ sub usable {
 	}
 
 	# make sure we can locate zpool
-	my $zpool_bin=`which zpool`;
+	# Written like this as which on some Linux distros such as CentOS 7 is broken.
+	my $zpool_bin=`/bin/sh -c 'which zpool 2> /dev/null'`;
 	if ( $? != 0 ){
 		$self->{usable}=0;
         return 0;
