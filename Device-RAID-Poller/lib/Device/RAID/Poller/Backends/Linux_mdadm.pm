@@ -151,7 +151,7 @@ sub run {
 				}
 
 				$line=~s/^.*[\t ]*//;
-				$return_hash{devices}{$dev}{$disk_status}=$line;
+				push(@{ $return_hash{devices}{$dev}{$disk_status} }, $line);
 			}{
 				if ( $line =~ /^[\t ]*State/ ){
 					# good states...
