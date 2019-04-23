@@ -78,6 +78,100 @@ sub run {
 
 	$return_hash{status}=1;
 
+	# get a list of devices
+	my $raw=`mdadm --detail --scan`;
+	my @raw_split=split(/\n/, $raw);
+	my @devs;
+	foreach my $line (@raw_split){
+		if ( $line =~ /^ARRAY/ ){
+			my @line_split=split(/[\t ]+/, $line);
+			push(@devs, $line_split[1]);
+		}
+	}
+
+	# Process each md device that exists.
+	foreach my $dev (@devs){
+		$return_hash{devices}{$dev}={
+									 'backend'=>'Linux_mdadm',
+									 'name'=>$dev,
+									 'good'=>[],
+									 'bad'=>[],
+									 'spare'=>[],
+									 'type'=>'mdadm',
+									 'BBUstatus'=>'na',
+									 'status'=>'unknown',
+									 };
+
+		# check device and break it appart
+		$raw=`mdadm --detail $dev`;
+		@raw_split=split(/\n/, $raw);
+		my $number_found=0;
+		my $process=0;
+		foreach my $line (@raw_split){
+			chomp($line);
+
+			if ( $line =~ /[\t ]*Number/ ){
+				$number_found=1;
+			}elsif( $number_found ){
+				$process=1;
+			}
+
+			if ( $process ){
+				# good disk...
+				# active
+				# rebuilding
+				# bad disk...
+				# removed
+				# spare disks...
+				# spare
+
+				# spare rebuilding = good, rebuilding... in the process of becoming not a spare
+			}{
+				if ( $line =~ /^[\t ]*State/ ){
+					# good states...
+					# clean
+					# active
+					# bad states...
+					# degraded
+					# inactive
+					# rebuilding states...
+					# resyncing
+					# recovering
+
+					# clean, degraded = degraded
+					# clean, degraded, recovering = rebuilding
+
+					if (
+						( $line =~ /clean/ ) ||
+						( $line =~ /active/ )
+						){
+						$return_hash{devices}{$dev}{type}='good';
+					}
+
+					if ( $line =~ /degraded/ ){
+						$return_hash{devices}{$dev}{type}='bad';
+					}
+
+					if (
+						( $line =~ /recovering/ ) ||
+						( $line =~ /resyncing/ )
+						){
+						$return_hash{devices}{$dev}{type}='rebuilding';
+					}
+
+					if ( $line =~ /inactive/ ){
+						$return_hash{devices}{$dev}{type}='bad';
+					}
+
+				}elsif( $line =~ /^[\t ]*Raid\ Level[\t ]*\:[\t ]*/ ){
+					$line=~s/^[\t ]*Raid\ Level[\t ]*\:[\t ]*//;
+					$return_hash{devices}{$dev}{type}=$line;
+				}
+			}
+
+		}
+	}
+
 	return %return_hash;
 }
 
@@ -108,6 +202,13 @@ sub usable {
 	}
 	chomp($mdadm_bin);
 	$self->{mdadm_bin}=$mdadm_bin;
+
+	# make sure we have atleast one device
+	my $raw=`mdadm --detail --scan`;
+	if ( $raw !~ /^ARRAY/ ){
+		$self->{usable}=0;
+        return 0;
+	}
 
 	$self->{usable}=1;
 	return 1;
