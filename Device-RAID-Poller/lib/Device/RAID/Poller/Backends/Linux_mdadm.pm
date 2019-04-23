@@ -126,6 +126,32 @@ sub run {
 				# spare
 
 				# spare rebuilding = good, rebuilding... in the process of becoming not a spare
+
+				my $disk_status='good';
+				if (
+					( $line =~ /active/ ) ||
+					( $line =~ /rebuilding/ )
+					){
+					$disk_status='good';
+				}
+
+				if ( $line =~ /spare/ ){
+					$disk_status='spare';
+				}
+
+				if (
+					( $line =~ /spare/ ) &&
+					( $line =~ /rebuilding/ )
+					){
+					$disk_status='good';
+				}
+
+				if ( $line =~ /removed/ ){
+					$disk_status='bad';
+				}
+
+				$line=~s/^.*[\t ]*//;
+				$return_hash{devices}{$dev}{$disk_status}=$line;
 			}{
 				if ( $line =~ /^[\t ]*State/ ){
 					# good states...
