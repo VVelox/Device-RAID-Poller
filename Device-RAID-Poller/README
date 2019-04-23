@@ -8,6 +8,7 @@ The currently supported systems are listed below.
 
     FreeBSD GEOM mirror
 	ZFS
+	Linux mdadm
 
 INSTALLATION
 
