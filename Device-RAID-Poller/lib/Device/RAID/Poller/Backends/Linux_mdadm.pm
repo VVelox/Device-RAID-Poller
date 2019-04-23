@@ -150,7 +150,7 @@ sub run {
 					$disk_status='bad';
 				}
 
-				$line=~s/^.*[\t ]*//;
+				$line=~s/^.*[\t ]//;
 				push(@{ $return_hash{devices}{$dev}{$disk_status} }, $line);
 			}{
 				if ( $line =~ /^[\t ]*State/ ){
@@ -171,22 +171,22 @@ sub run {
 						( $line =~ /clean/ ) ||
 						( $line =~ /active/ )
 						){
-						$return_hash{devices}{$dev}{type}='good';
+						$return_hash{devices}{$dev}{status}='good';
 					}
 
 					if ( $line =~ /degraded/ ){
-						$return_hash{devices}{$dev}{type}='bad';
+						$return_hash{devices}{$dev}{status}='bad';
 					}
 
 					if (
 						( $line =~ /recovering/ ) ||
 						( $line =~ /resyncing/ )
 						){
-						$return_hash{devices}{$dev}{type}='rebuilding';
+						$return_hash{devices}{$dev}{status}='rebuilding';
 					}
 
 					if ( $line =~ /inactive/ ){
-						$return_hash{devices}{$dev}{type}='bad';
+						$return_hash{devices}{$dev}{status}='bad';
 					}
 
 				}elsif( $line =~ /^[\t ]*Raid\ Level[\t ]*\:[\t ]*/ ){
