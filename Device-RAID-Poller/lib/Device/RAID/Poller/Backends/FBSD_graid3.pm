@@ -1,4 +1,4 @@
-package Device::RAID::Poller::Backends::FBSD_gmirror;
+package Device::RAID::Poller::Backends::FBSD_graid3;
 
 use 5.006;
 use strict;
@@ -6,7 +6,7 @@ use warnings;
 
 =head1 NAME
 
-Device::RAID::Poller::Backends::FBSD_gmirror - FreeBSD GEOM mirror RAID backend.
+Device::RAID::Poller::Backends::FBSD_graid3 - FreeBSD GEOM RAID3 backend.
 
 =head1 VERSION
 
@@ -19,9 +19,9 @@ our $VERSION = '0.0.0';
 
 =head1 SYNOPSIS
 
-    use Device::RAID::Poller::Backends::FBSD_gmirror;
+    use Device::RAID::Poller::Backends::FBSD_graid3;
     
-    my $backend = Device::RAID::Poller::Backends::FBSD_gmirror->new;
+    my $backend = Device::RAID::Poller::Backends::FBSD_graid3->new;
     
     my $usable=$backend->usable;
     my %return_hash;
@@ -38,7 +38,7 @@ our $VERSION = '0.0.0';
 
 Initiates the backend object.
 
-    my $backend = Device::RAID::Poller::Backends::FBSD_gmirror->new;
+    my $backend = Device::RAID::Poller::Backends::FBSD_graid3->new;
 
 =cut
 
@@ -77,7 +77,7 @@ sub run {
 	}
 
 	# Fetch the raw gmirror status.
-	my $raw=`/sbin/gmirror status`;
+	my $raw=`/sbin/graid3 status`;
 	if ( $? != 0 ){
 		return %return_hash;
 	}
@@ -98,12 +98,12 @@ sub run {
 			#create the device if needed in the return hash
 			if ( ! defined( $return_hash{$dev} ) ){
 				$return_hash{devices}{$dev}={
-									'backend'=>'FBSD_gmirror',
+									'backend'=>'FBSD_graid3',
 									'name'=>$dev,
 									'good'=>[],
 									'bad'=>[],
 									'spare'=>[],
-									'type'=>'mirror',
+									'type'=>'raid3',
 									'BBUstatus'=>'na',
 									'status'=>'unknown',
 									};
@@ -161,7 +161,7 @@ Returns a perl boolean for if it is usable or not.
 sub usable {
 	my $self=$_[0];
 
-	my $gmirror_bin='/sbin/gmirror';
+	my $gmirror_bin='/sbin/graid3';
 	my $kldstat_bin='/sbin/kldstat';
 	if (
 		( $^O !~ 'freebsd' ) ||
@@ -172,7 +172,7 @@ sub usable {
 		return 0;
 	}
 
-	system('/sbin/kldstat -q -n geom_mirror');
+	system('/sbin/kldstat -q -n geom_raid3');
 	if ( $? != 0 ){
 		$self->{usable}=0;
         return 0;
