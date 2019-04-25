@@ -215,7 +215,8 @@ sub usable {
 	# If we don't do this, the pool test will result in
 	# it being loaded, which we don't want to do.
 	if ( $^O !~ 'freebsd' ){
-		system('/sbin/kldstat -q -n zfs');
+		# Test for this via this method as 'kldstat -q -n zfs' will error if it is compiled in
+		system('/sbin/sysctl -q kstat.zfs.misc.arcstats.hits > /dev/null');
 		if ( $? != 0 ){
 			$self->{usable}=0;
 			return 0;

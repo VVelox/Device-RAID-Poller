@@ -1,9 +1,12 @@
 Revision history for Device-RAID-Poller
 
 0.1.0	 2919-04-
-		 -Add FreeBSD GEOM raid3 support.
-		 -The ZFS backend now checks if ZFS on FreeBSD is laoded
-		 	  first to avoid accidentally loading it.
+         -Add FreeBSD GEOM raid3 support.
+         -The ZFS backend now checks if ZFS on FreeBSD is laoded
+             first to avoid accidentally loading it.
+		 -Check for sysctls now instead of loaded kernel modules
+             to avoid errors on usability checks if a module is
+			 compiled in instead of loaded at boot on FreeBSD.
 
 0.0.0	 2019-04-23/10:10
 		 -Initial release.

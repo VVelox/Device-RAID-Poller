@@ -162,18 +162,17 @@ Returns a perl boolean for if it is usable or not.
 sub usable {
 	my $self=$_[0];
 
-	my $gmirror_bin='/sbin/graid3';
-	my $kldstat_bin='/sbin/kldstat';
 	if (
 		( $^O !~ 'freebsd' ) ||
-		( ! -x $gmirror_bin ) ||
-		( ! -x $kldstat_bin )
+		( ! -x '/sbin/graid3' )
 		){
 		$self->{usable}=0;
 		return 0;
 	}
 
-	system('/sbin/kldstat -q -n geom_raid3');
+	# Test for it this way as '/sbin/kldstat -q -n geom_raid3' will error
+	# if it is compiled in.
+	system('/sbin/sysctl -q kern.features.geom_raid3 > /dev/null');
 	if ( $? != 0 ){
 		$self->{usable}=0;
         return 0;
