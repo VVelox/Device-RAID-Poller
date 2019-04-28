@@ -8,6 +8,7 @@ The currently supported systems are listed below.
 
     FreeBSD GEOM mirror
     FreeBSD GEOM RAID3
+    FreeBSD GEOM RAID
     ZFS
     Linux mdadm
 
