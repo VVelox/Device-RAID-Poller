@@ -1,6 +1,6 @@
 Revision history for Device-RAID-Poller
 
-0.1.0	 2919-04-29/01:15
+0.1.0	 2019-04-29/01:15
          -Add FreeBSD GEOM raid3 support.
          -Add FreeBSD GEOM raid support.
          -Add Adaptec arcconf support.
