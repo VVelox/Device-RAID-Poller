@@ -11,7 +11,7 @@ The currently supported systems are listed below.
     FreeBSD GEOM RAID
     ZFS
     Linux mdadm
-	Adaptec arcconf
+    Adaptec arcconf
 
 INSTALLATION
 

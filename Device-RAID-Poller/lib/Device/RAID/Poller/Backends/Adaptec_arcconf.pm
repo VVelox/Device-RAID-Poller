@@ -77,128 +77,104 @@ sub run {
 		return %return_hash;
 	}
 
-	$return_hash{status}=1;
-
 	# get a list of devices
-	my $raw=`mdadm --detail --scan`;
-	my @raw_split=split(/\n/, $raw);
-	my @devs;
-	foreach my $line (@raw_split){
-		if ( $line =~ /^ARRAY/ ){
-			my @line_split=split(/[\t ]+/, $line);
-			push(@devs, $line_split[1]);
+	my $adapter=1;
+	while( $adapter <= $self->{adapters} ){
+		my $raw=`arcconf GETCONFIG $adapter AD`;
+		my @raw_split=split(/\n/, $raw);
+
+		# Figures out the BBU status
+		my $bbustatus='unknown';
+		my @backup_lines=grep(/Overall\ Backup\ Unit\ Status/, @raw_split);
+		if (
+			defined($backup_lines[0]) &&
+			(
+			 ( $backup_lines[0] =~ /\:[\t ]*Ready/ ) ||
+			 ( $backup_lines[0] =~ /Normal/ )
+			 )
+			){
+			# If this matches, it should be good.
+			# Can't match just /Ready/ as it will also match "Not Ready".
+			my $bbustatus='good';
+		}elsif(
+			   defined($backup_lines[0]) &&
+			   (
+				( $backup_lines[0] =~ /Invalid/ ) ||
+				( $backup_lines[0] =~ /Not\ Present/ )
+				)
+			   ){
+			my $bbustatus='na';
+		}elsif( defined($backup_lines[0]) ){
+			# If we are here, we did not match it as being good or not present
+			my $bbustatus='bad';
 		}
-	}
 
-	# Process each md device that exists.
-	foreach my $dev (@devs){
-		$return_hash{devices}{$dev}={
-									 'backend'=>'Linux_mdadm',
-									 'name'=>$dev,
-									 'good'=>[],
-									 'bad'=>[],
-									 'spare'=>[],
-									 'type'=>'mdadm',
-									 'BBUstatus'=>'na',
-									 'status'=>'unknown',
-									 };
-
-		# check device and break it appart
-		$raw=`mdadm --detail $dev`;
+		# Grab the LD config.
+		$raw=`arcconf GETCONFIG $adapter LD`;
 		@raw_split=split(/\n/, $raw);
-		my $number_found=0;
-		my $process=0;
+		my $LDN=undef;
+		my $dev=undef;
 		foreach my $line (@raw_split){
-			chomp($line);
-
-			if ( $line =~ /[\t ]*Number/ ){
-				$number_found=1;
-			}elsif( $number_found ){
-				$process=1;
+			if ( $line =~ /Logical Device number/ ){
+				$line=~s/[\t ]*Logical Device number[\t ]*//;
+				$LDN=$line;
+				$dev='arcconf '.$adapter.'-'.$LDN;
+				$return_hash{devices}{$dev}={
+											 'backend'=>'FBSD_graid',
+											 'name'=>$dev,
+											 'good'=>[],
+											 'bad'=>[],
+											 'spare'=>[],
+											 'type'=>'unknown',
+											 'BBUstatus'=>'na',
+											 'status'=>'unknown',
+											 };
 			}
 
-			if ( $process ){
-				# good disk...
-				# active
-				# rebuilding
-				# bad disk...
-				# removed
-				# spare disks...
-				# spare
-
-				# spare rebuilding = good, rebuilding... in the process of becoming not a spare
-
-				my $disk_status='good';
+			# If we have a LDN, then we are in a LD information section of the output
+			if ( $line =~ /Status\ of\ Logical\ Device/ ){
+				$line=~s/[\t ]*Status\ of\ Logical\ Device\:[\t ]*//;
 				if (
-					( $line =~ /active/ ) ||
-					( $line =~ /rebuilding/ )
-					){
-					$disk_status='good';
+					( $line =~ /Optimal/ ) ||
+					(
+					 ( $line =~ /Reconfiguring/ ) &&
+					 ( $line !~ /Degraded/ ) &&
+					 ( $line !~ /Suboptimal/ )
+					 )
+					 ){
+					# Optimal appears to be the only fully good one.
+					# Reconfiguring not paired with either Suboptimal or Degraded is good
+					$return_hash{$dev}{type}='good';
+				}elsif( $line =~ /Rebuilding/ ){
+					# Should match either of the two below.
+					# Suboptimal, Rebuilding
+					# Degraded, Rebuilding
+					$return_hash{$dev}{type}='rebuilding';
+				}else{
+					# Anything else is bad.
+					$return_hash{$dev}{type}='bad';
 				}
-
-				if ( $line =~ /spare/ ){
-					$disk_status='spare';
-				}
-
-				if (
-					( $line =~ /spare/ ) &&
-					( $line =~ /rebuilding/ )
-					){
-					$disk_status='good';
-				}
-
-				if ( $line =~ /removed/ ){
-					$disk_status='bad';
-				}
-
-				$line=~s/^.*[\t ]//;
-				push(@{ $return_hash{devices}{$dev}{$disk_status} }, $line);
-			}{
-				if ( $line =~ /^[\t ]*State/ ){
-					# good states...
-					# clean
-					# active
-					# bad states...
-					# degraded
-					# inactive
-					# rebuilding states...
-					# resyncing
-					# recovering
-
-					# clean, degraded = degraded
-					# clean, degraded, recovering = rebuilding
-
-					if (
-						( $line =~ /clean/ ) ||
-						( $line =~ /active/ )
-						){
-						$return_hash{devices}{$dev}{status}='good';
-					}
-
-					if ( $line =~ /degraded/ ){
-						$return_hash{devices}{$dev}{status}='bad';
-					}
-
-					if (
-						( $line =~ /recovering/ ) ||
-						( $line =~ /resyncing/ )
-						){
-						$return_hash{devices}{$dev}{status}='rebuilding';
-					}
-
-					if ( $line =~ /inactive/ ){
-						$return_hash{devices}{$dev}{status}='bad';
-					}
-
-				}elsif( $line =~ /^[\t ]*Raid\ Level[\t ]*\:[\t ]*/ ){
-					$line=~s/^[\t ]*Raid\ Level[\t ]*\:[\t ]*//;
-					$return_hash{devices}{$dev}{type}=$line;
+			}elsif( $line =~ /RAID level/ ){
+				$line=~s/[\t ]*RAID\ level\:[\t ]*//;
+				$return_hash{$dev}{type}=$line;
+			}elsif( $line =~ /[\t ]*Segment [0123456789]/ ){
+				$line =~ s/[\t ]*Segment [0123456789]*\:[\t ]*//;
+				if ( $line =~ /Present/ ){
+					$line=~s/Present[\t ]*//;
+					push( @{ $return_hash{devices}{$dev}{good} }, $line );
+				}elsif( $line =~ /Missing/ ){
+					# The disk is is just missing.
+					push( @{ $return_hash{devices}{$dev}{bad} }, $line );
+				}else{
+					$line=~s/[A-Za-z\t ]*//;
+					push( @{ $return_hash{devices}{$dev}{bad} }, $line );
 				}
 			}
-
 		}
-	}
 
+		$adapter++;
+	}
+	$return_hash{status}=1;
 	return %return_hash;
 }
 
