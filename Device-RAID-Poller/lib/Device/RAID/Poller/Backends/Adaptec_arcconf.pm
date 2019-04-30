@@ -126,7 +126,7 @@ sub run {
 											 'bad'=>[],
 											 'spare'=>[],
 											 'type'=>'unknown',
-											 'BBUstatus'=>'na',
+											 'BBUstatus'=>$bbustatus,
 											 'status'=>'unknown',
 											 };
 			}
@@ -206,8 +206,8 @@ sub usable {
 		return 0;
 	}
 
-	# make sure we can locate mdadm
-	my $mdadm_bin=`/bin/sh -c 'which arcconf 2> /dev/null'`;
+	# make sure we can locate arcconf
+	my $arcconf_bin=`/bin/sh -c 'which arcconf 2> /dev/null'`;
 	if ( $? != 0 ){
 		$self->{usable}=0;
         return 0;
