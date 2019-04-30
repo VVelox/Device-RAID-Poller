@@ -144,15 +144,15 @@ sub run {
 					 ){
 					# Optimal appears to be the only fully good one.
 					# Reconfiguring not paired with either Suboptimal or Degraded is good
-					$return_hash{devices}{$dev}{type}='good';
+					$return_hash{devices}{$dev}{status}='good';
 				}elsif( $line =~ /Rebuilding/ ){
 					# Should match either of the two below.
 					# Suboptimal, Rebuilding
 					# Degraded, Rebuilding
-					$return_hash{devices}{$dev}{type}='rebuilding';
+					$return_hash{devices}{$dev}{status}='rebuilding';
 				}else{
 					# Anything else is bad.
-					$return_hash{devices}{$dev}{type}='bad';
+					$return_hash{devices}{$dev}{status}='bad';
 				}
 			}elsif( $line =~ /RAID\ level/ ){
 				$line=~s/[\t ]*RAID\ level[\t ]*\:[\t ]*//;
