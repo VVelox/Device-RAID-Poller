@@ -193,7 +193,7 @@ sub usable {
 	my $self=$_[0];
 
 	if (
-		( $^O !~ 'linux' ) ||
+		( $^O !~ 'linux' ) &&
 		( $^O !~ 'freebsd' )
 		){
 		$self->{usable}=0;
