@@ -120,7 +120,7 @@ sub run {
 				$LDN=$line;
 				$dev='arcconf '.$adapter.'-'.$LDN;
 				$return_hash{devices}{$dev}={
-											 'backend'=>'FBSD_graid',
+											 'backend'=>'Adaptec_arcconf',
 											 'name'=>$dev,
 											 'good'=>[],
 											 'bad'=>[],
@@ -158,7 +158,7 @@ sub run {
 				$line=~s/[\t ]*RAID\ level\:[\t ]*//;
 				$return_hash{$dev}{type}=$line;
 			}elsif( $line =~ /[\t ]*Segment [0123456789]/ ){
-				$line =~ s/[\t ]*Segment [0123456789]*\:[\t ]*//;
+				$line =~ s/[\t ]*Segment [0123456789]*[\t ]*\:[\t ]*//;
 				if ( $line =~ /Present/ ){
 					$line=~s/Present[\t ]*//;
 					push( @{ $return_hash{devices}{$dev}{good} }, $line );
