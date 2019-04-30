@@ -3,6 +3,8 @@ Revision history for Device-RAID-Poller
 0.1.1	 2019-04-30/05:00
          -Don't call sysctl on the ZFS test on Linux, only FreeBSD.
          -Silence which for arcconf check.
+         -Fix Adaptec_arcconf BBU status cehcking.
+		 -Now includes the LD name in the return from Adaptec arcconf.
          -Don't consider Adaptec_arcconf unusable if Linux or FreeBSD
              is found.
 

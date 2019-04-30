@@ -95,7 +95,7 @@ sub run {
 			){
 			# If this matches, it should be good.
 			# Can't match just /Ready/ as it will also match "Not Ready".
-			my $bbustatus='good';
+			$bbustatus='good';
 		}elsif(
 			   defined($backup_lines[0]) &&
 			   (
@@ -103,10 +103,10 @@ sub run {
 				( $backup_lines[0] =~ /Not\ Present/ )
 				)
 			   ){
-			my $bbustatus='na';
+			$bbustatus='na';
 		}elsif( defined($backup_lines[0]) ){
 			# If we are here, we did not match it as being good or not present
-			my $bbustatus='bad';
+			$bbustatus='bad';
 		}
 
 		# Grab the LD config.
@@ -169,6 +169,12 @@ sub run {
 					$line=~s/[A-Za-z\t ]*//;
 					push( @{ $return_hash{devices}{$dev}{bad} }, $line );
 				}
+			}elsif( $line =~ /Logical\ Device\ name/ ){
+				$line =~ s/[\t ]*Logical\ Device\ name[\t ]*\:[\t ]*//;
+				my $new_dev=$dev.' - '.$line;
+				$return_hash{devices}{$new_dev}= delete $return_hash{devices}{$dev};
+				$dev=$new_dev;
+				$return_hash{devices}{$dev}{name}=$dev;
 			}
 		}
 
