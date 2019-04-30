@@ -156,7 +156,7 @@ sub run {
 				}
 			}elsif( $line =~ /RAID\ level/ ){
 				$line=~s/[\t ]*RAID\ level[\t ]*\:[\t ]*//;
-				$return_hash{$dev}{type}=$line;
+				$return_hash{devices}{$dev}{type}=$line;
 			}elsif( $line =~ /[\t ]*Segment [0123456789]/ ){
 				$line =~ s/[\t ]*Segment [0123456789]*[\t ]*\:[\t ]*//;
 				if ( $line =~ /Present/ ){
