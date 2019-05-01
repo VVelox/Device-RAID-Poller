@@ -178,7 +178,7 @@ sub usable {
 	my $self=$_[0];
 
 	if (
-		( $^O !~ 'freebsd' ) ||
+		( $^O !~ 'freebsd' ) &&
 		( ! -x '/sbin/graid' )
 		){
 		$self->{usable}=0;
