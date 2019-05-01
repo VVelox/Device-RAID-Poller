@@ -1,6 +1,6 @@
 Revision history for Device-RAID-Poller
 
-0.1.1	 2019-04-30/05:00
+0.1.1	 2019-05-01/00:15
          -Don't call sysctl on the ZFS test on Linux, only FreeBSD.
          -Silence which for arcconf check.
          -Fix Adaptec_arcconf BBU status cehcking.
