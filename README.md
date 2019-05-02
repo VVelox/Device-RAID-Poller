@@ -35,7 +35,7 @@ For the Perl documentation, please see https://metacpan.org/release/Device-RAID-
 
 ### Debian
 
-# Monitoring Confituation
+# Monitoring Configuration
 
 ## Nagios Style
 
