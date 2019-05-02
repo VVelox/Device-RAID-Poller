@@ -50,7 +50,7 @@ to your suders file.
 
     nagios ALL = NOPASSWD: /usr/local/bin/check_raid
 
-#### Icinga2 Check Command Object
+### Icinga2 Check Command Object
 
 Below adds the check command that checks the previously configured nrpe setup.
 
