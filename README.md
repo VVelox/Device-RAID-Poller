@@ -2,7 +2,7 @@
 
 RAID status poller framework for Perl.
 
-For the Perl documentation, please see https://metacpan.org/pod/Device::RAID::Poller .
+For the Perl documentation, please see https://metacpan.org/release/Device-RAID-Poller .
 
 # Supported Backends
 
