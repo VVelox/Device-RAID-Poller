@@ -6,11 +6,15 @@ RAID status poller framework for Perl.
 ## Software
 
 * FreeBSD GEOM
-** RAID
+
+** RAID - RAID BIOS support as seen in various cheap Intel, JMicron, NVIDIA, Promise, etc chipsets.
+
 ** Mirror
+
 ** RAID3
 
 * Linux
+
 ** mdadm
 
 * ZFS
@@ -18,6 +22,7 @@ RAID status poller framework for Perl.
 ## Hardware
 
 * Adaptec
+
 ** arcconf
 
 # Installing
