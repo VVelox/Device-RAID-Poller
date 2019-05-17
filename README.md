@@ -33,6 +33,13 @@ For the Perl documentation, please see https://metacpan.org/release/Device-RAID-
 
 ### CentOS
 
+Do the following as root. When it asks you if you want to use local::lib or sudo, just answer sudo.
+
+    yum install cpan
+    cpan Module::List
+    cpan Module::Build
+    cpan Device::RAID::Poller
+
 ### Debian
 
 # Monitoring Configuration
