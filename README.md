@@ -43,6 +43,11 @@ and not rely on local::lib.
 
 ### Debian
 
+This has been tested as working on Debian 9 minimal.
+
+    apt install perl perl-base perl-modules make
+    cpan Module::Build Module::List Device::RAID::Poller
+
 # Monitoring Configuration
 
 ## Nagios Style
