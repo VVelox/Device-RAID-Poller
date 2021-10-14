@@ -7,7 +7,6 @@ lib/Device/RAID/Poller/Backends/ZFS.pm
 lib/Device/RAID/Poller/Backends/Linux_mdadm.pm
 lib/Device/RAID/Poller/Backends/Avago_tw_cli.pm
 lib/Device/RAID/Poller/Backends/Adaptec_arcconf.pm
-lib/Device/RAID/Poller/Backends/MegaRAID_megacli.pm
 Makefile.PL
 MANIFEST			This list of files
 README
