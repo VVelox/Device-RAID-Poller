@@ -1,4 +1,4 @@
-package Device::RAID::Poller::Backends::Adaptec_arcconf;
+package Device::RAID::Poller::Backends::Avago_tw_cli;
 
 use 5.006;
 use strict;
@@ -81,27 +81,143 @@ sub run {
 	## tw_cli show
 	#Ctl   Model        (V)Ports  Drives   Units   NotOpt  RRate   VRate  BBU
 	#------------------------------------------------------------------------
-	#c2    9690SA-8I    6         6        2       0       1       1      Charging 
+	#c2    9690SA-8I    6         6        2       0       1       1      Charging
+	my $raw = `tw_cli show`;
+	if ( $? != 0 ) {
+		return %return_hash;
+	}
+	my @raw_split = split( /\n/, $raw );
 
+	# controller stuff starts on line tree, array are zero indexed
+	my $line_int = 2;
 
-	
-	
+	# holds a list of the found controllers
+	my %controllers;
+	while ( defined( $raw_split[$line_int] ) ) {
+		my ( $controller, $model, $vports, $drives, $units, $notopt, $rrate, $vrate, $bbu )
+			= split( /[\t\ ]+/, $raw_split[$line_int], 9 );
+
+		# make sure we have the info we care about
+		if (   defined($controller)
+			&& defined($bbu) )
+		{
+			# normalize the found BBU data
+			if ( $bbu =~ /Charging/ ) {
+				$bbu = 'charging';
+			}
+			elsif ( $bbu =~ /^-/ ) {
+				$bbu = 'notPresent';
+			}
+			elsif ( $bbu =~ /[Oo][Kk]/ ) {
+				$bbu = 'good';
+			}
+			elsif ( $bbu =~ /Testing/ ) {
+				$bbu = 'testing';
+			}elsif (
+					($bbu=~/Fault/) ||
+					($bbu=~/WeakBat/) ||
+					($bbu=~/Error/)
+					) {
+				$bbu='failed';
+			}
+			else {
+				$bbu = 'unknown';
+			}
+
+			$controllers{$controller} = $bbu;
+		}
+
+		$line_int++;
+	}
+
 	# parse thise to figure out drive status
 	#
 	## tw_cli /c2 show
 	#Unit  UnitType  Status         %RCmpl  %V/I/M  Stripe  Size(GB)  Cache  AVrfy
 	#------------------------------------------------------------------------------
-	#u0    RAID-1    OK             -       -       -       298.013   Ri     ON     
-	#u1    RAID-5    OK             -       -       64K     2793.94   Ri     ON     
+	#u0    RAID-1    OK             -       -       -       298.013   Ri     ON
+	#u1    RAID-5    OK             -       -       64K     2793.94   Ri     ON
 	#
 	#VPort Status         Unit Size      Type  Phy Encl-Slot    Model
 	#------------------------------------------------------------------------------
-	#p0    OK             u0   298.09 GB SATA  0   -            ST3320613AS         
-	#p1    OK             u0   298.09 GB SATA  1   -            ST3320613AS         
-	#p2    OK             u1   931.51 GB SATA  2   -            Hitachi HDS721010CL 
-	#p3    OK             u1   931.51 GB SATA  3   -            Hitachi HDS721010CL 
-	#p4    OK             u1   931.51 GB SATA  4   -            Hitachi HDS721010CL 
-	#p5    OK             u1   931.51 GB SATA  5   -            Hitachi HDS721010CL 
+	#p0    OK             u0   298.09 GB SATA  0   -            ST3320613AS
+	#p1    OK             u0   298.09 GB SATA  1   -            ST3320613AS
+	#p2    OK             u1   931.51 GB SATA  2   -            Hitachi HDS721010CL
+	#p3    OK             u1   931.51 GB SATA  3   -            Hitachi HDS721010CL
+	#p4    OK             u1   931.51 GB SATA  4   -            Hitachi HDS721010CL
+	#p5    OK             u1   931.51 GB SATA  5   -            Hitachi HDS721010CL
+	foreach my $controller ( @{ keys(%controllers) } ) {
+		$raw = `tw_cli /$controller show`;
+		my $process = 1;
+		if ( $? != 0 ) {
+			$process = 0;
+		}
+		@raw_split = split( /\n/, $raw );
+
+		my @arrays;
+
+		# raid stuff starts on line three
+		$line_int = 2;
+		while ( defined( $raw_split[$line_int] ) ) {
+			my @line_split = split( /[\t\ ]+/, $raw_split[$line_int] );
+
+			if ( defined( $line_split[0] )
+				&& ( $line_split[0] =~ /^u[0123456789]+/ ) )
+			{
+
+				# normalize array status
+				my $status=$line_split[1];
+				if ($status =~ /OK/) {
+					$status='good';
+				}elsif ( $status=~/^INIT/ ) {
+					$status='initializing';
+				}elsif (
+						( $status =~ /^REBUILDING/ ) ||
+						( $status =~ /^RECOVERY/ ) ||
+						( $status =~ /^MIGRATING/ )
+						){
+					$status='rebuilding';
+				}elsif (
+						( $status=~/DEGRADED/ ) ||
+						( $status=~/INOPERABLE/ )
+						) {
+					$status='failed';
+				}else {
+					$status='unknown';
+				}
+
+				# add a found array
+				$return_hash{devices}{'Avago_tw_cli '.$line_split[0]}={
+																	   BBUstatus=>$controllers{$controller},
+																	   good=>[],
+																	   bad=>[],
+																	   spare=>[],
+																	   $status=>$status,
+																	   backend=>'Avago_tw_cli',
+																	   type=>$line_split[1],
+																	   };
+
+			}
+
+			# handle it if we find a drive line
+			if ( defined( $line_split[0] )
+				 && ( $line_split[0] =~ /^p[0123456789]+/ ) &&
+				 defined( $line_split[1] ) &&
+				 defined( $line_split[2] ) &&
+				 ( $line_split[2] =~ /^u[0123456789]+/ )
+				)
+			{
+				if ($line_split[1] =~ /OK/) {
+					push(@{ $return_hash{devices}{'Avago_tw_cli '.$line_split[2]}{good} }, $line_split[0]);
+				}else {
+					push(@{ $return_hash{devices}{'Avago_tw_cli '.$line_split[2]}{bad} }, $line_split[0]);
+				}
+			}
+
+			$line_int++;
+		}
+
+	}
 
 	$return_hash{status} = 1;
 	return %return_hash;
@@ -156,10 +272,10 @@ sub usable {
 	}
 
 	if ( defined( $raw_split[2] ) ) {
-		my @third_line=split(/[\t\ ]/, $raw_split[2], 9);
+		my @third_line = split( /[\t\ ]/, $raw_split[2], 9 );
 
 		# we don't have a BBU status
-		if (!defined ( $third_line[8] ) ) {
+		if ( !defined( $third_line[8] ) ) {
 			$self->{usable} = 0;
 			return 0;
 		}

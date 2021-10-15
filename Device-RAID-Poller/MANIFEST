@@ -17,6 +17,7 @@ t/03-load.t
 t/04-load.t
 t/05-load.t
 t/06-load.t
+t/07-load.t
 t/manifest.t
 t/pod-coverage.t
 t/pod.t
