@@ -18,7 +18,7 @@ For the Perl documentation, please see https://metacpan.org/release/Device-RAID-
 
 ## Hardware
 
-* 3ware
+* Avago
     * tw_cli
 * Adaptec
     * arcconf
