@@ -18,6 +18,8 @@ For the Perl documentation, please see https://metacpan.org/release/Device-RAID-
 
 ## Hardware
 
+* 3ware
+    * tw_cli
 * Adaptec
     * arcconf
 
